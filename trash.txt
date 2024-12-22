@@ -1,0 +1,47 @@
+ public function update(Request $request, Siswa $siswa)
+    {
+        // Validasi data
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'avatar' => ['nullable', 'image', 'mimes:png,jpg,jpeg'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,'.$siswa->user_id],
+            'password' => ['nullable', 'string', 'min:6'],
+            'kelas_id' => ['required', 'integer'],
+            'is_active' => ['required', 'boolean'],
+            'ustad_id' => ['required','integer'],
+        ]);
+
+        // Update data user
+        $user = $siswa->user;
+        $user->name = $request->name;
+        $user->email = $request->email;
+
+        // Jika ada file avatar baru
+        if ($request->hasFile('avatar')) {
+            // Simpan file baru
+            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+
+            // Hapus avatar lama jika ada
+            if ($user->avatar) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+
+            // Update avatar
+            $user->avatar = $avatarPath;
+        }
+
+        // Jika password diisi, update password
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        }
+
+        $user->save();
+
+        // Update data siswa
+        $siswa->update([
+            'kelas_id' => $request->kelas_id,
+            'is_active' => $request->is_active,
+        ]);
+
+        return redirect()->route('admin.siswas.index');
+    }
